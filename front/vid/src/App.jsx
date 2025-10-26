@@ -1,8 +1,8 @@
 // src/App.js
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
-import UploadVideo from "./components/uploadVideo";
-import VideoCard from "./components/videoCard";
+import UploadVideo from "./components/UploadVideo";
+import VideoCard from "./components/VideoCard";
 
 function App() {
   return (
