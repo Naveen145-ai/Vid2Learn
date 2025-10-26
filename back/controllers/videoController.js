@@ -1,72 +1,119 @@
-const fs = require("fs");
-const path = require("path");
 const ffmpeg = require("fluent-ffmpeg");
-const cloudinary = require("../config/cloudinary"); // your Cloudinary setup
+const cloudinary = require("../config/cloudinary");
 const Video = require("../models/videoModel");
-const { execFile } = require("child_process");
+const streamifier = require("streamifier");
+const { spawn } = require("child_process");
 
-// Helper: transcribe audio using Ollama CLI
-const transcribeWithOllama = async (audioPath) => {
+// Helper: extract audio directly from buffer
+const extractAudioBuffer = (videoBuffer) => {
   return new Promise((resolve, reject) => {
-    execFile(
-      "ollama",
-      ["run", "dimavz/whisper-tiny", "--input", fs.readFileSync(audioPath)],
-      (err, stdout, stderr) => {
-        if (err) return reject(err);
-        resolve(stdout.trim());
-      }
-    );
+    const chunks = [];
+    const command = ffmpeg()
+      .input(streamifier.createReadStream(videoBuffer))
+      .format("mp3")
+      .on("error", reject)
+      .on("end", () => resolve(Buffer.concat(chunks)))
+      .pipe();
+
+    command.on("data", (chunk) => chunks.push(chunk));
   });
 };
 
-// Upload video, extract audio, transcribe
-const extractAudioAndTranscribe = async (req, res) => {
+// Upload video, extract audio, generate transcript/summary/quiz
+const extractAudioAndGenerateNotes = async (req, res) => {
+  console.log('Upload request received');
   try {
-    if (!req.file) return res.status(400).json({ message: "No video uploaded" });
+    if (!req.file) {
+      console.error('No file in request');
+      return res.status(400).json({ success: false, message: "No video file provided" });
+    }
+    
+    console.log(`Received file: ${req.file.originalname}, size: ${req.file.size} bytes`);
 
     // 1️⃣ Upload video to Cloudinary
-    const uploadedVideo = await cloudinary.uploader.upload(req.file.path, {
-      resource_type: "video",
-    });
+    console.log('Starting Cloudinary upload...');
+    cloudinary.uploader.upload_stream(
+      { 
+        resource_type: "video",
+        folder: 'videos',
+        chunk_size: 6000000 // 6MB chunks for better reliability
+      },
+      async (error, result) => {
+        if (error) {
+          console.error('Cloudinary upload error:', error);
+          return res.status(500).json({ 
+            success: false, 
+            message: 'Failed to upload video to Cloudinary',
+            error: error.message 
+          });
+        }
+        if (error) return res.status(500).json({ message: error.message });
 
-    // 2️⃣ Extract audio
-    const audioPath = path.join(__dirname, "../uploads", Date.now() + "-audio.mp3");
-    await new Promise((resolve, reject) => {
-      ffmpeg(req.file.path)
-        .output(audioPath)
-        .on("end", resolve)
-        .on("error", reject)
-        .run();
-    });
+        const videoUrl = result.secure_url;
 
-    // 3️⃣ Upload audio to Cloudinary
-    const uploadedAudio = await cloudinary.uploader.upload(audioPath, {
-      resource_type: "auto",
-    });
+        // 2️⃣ Extract audio from uploaded video buffer
+        const audioBuffer = await extractAudioBuffer(req.file.buffer);
 
-    // 4️⃣ Transcribe audio using Ollama CLI
-    const transcript = await transcribeWithOllama(audioPath);
+        // 3️⃣ Upload audio to Cloudinary
+        const uploadedAudio = await cloudinary.uploader.upload_stream(
+          { resource_type: "auto" },
+          async (err, audioResult) => {
+            if (err) return res.status(500).json({ message: err.message });
 
-    // 5️⃣ Save to MongoDB
-    const newVideo = await Video.create({
-      title: req.file.originalname,
-      videoUrl: uploadedVideo.secure_url,
-      audioUrl: uploadedAudio.secure_url,
-      transcript,
-    });
+            const audioUrl = audioResult.secure_url;
 
-    // 6️⃣ Cleanup local files
-    fs.unlinkSync(req.file.path);
-    fs.unlinkSync(audioPath);
+            // 4️⃣ Generate transcript, summary, key concepts, quiz using Ollama
+            const prompt = `
+              Transcribe the audio at URL: ${audioUrl}
+              Then provide:
+              1. transcript
+              2. summary
+              3. key concepts (array)
+              4. 5 multiple-choice questions with 4 options each and correct answer
+              Format output as JSON with keys: transcript, summary, keyConcepts, quiz
+            `;
 
-    res.json({
-      message: "Video uploaded, audio extracted, and transcription done!",
-      video: newVideo,
-    });
+            const child = spawn("ollama", ["run", "deepseek-r1:8b", "--prompt", prompt]);
+            let output = "";
+
+            child.stdout.on("data", (data) => (output += data.toString()));
+            child.stderr.on("data", (errData) => console.error("Ollama error:", errData.toString()));
+
+            child.on("close", async () => {
+              let notes;
+              try {
+                notes = JSON.parse(output);
+              } catch (err) {
+                console.error("Failed to parse Ollama output:", err);
+                return res.status(500).json({ message: "Failed to process audio notes" });
+              }
+
+              // 5️⃣ Save to MongoDB
+              const video = await Video.create({
+                title: req.file.originalname,
+                videoUrl,
+                audioUrl,
+                transcript: notes.transcript,
+                summary: notes.summary,
+                keyConcepts: notes.keyConcepts,
+                quiz: notes.quiz,
+              });
+
+              res.json({ message: "Video processed successfully!", video });
+            });
+          }
+        );
+
+        streamifier.createReadStream(audioBuffer).pipe(uploadedAudio);
+      }
+    );
+
+    // Pipe video buffer to Cloudinary upload
+    streamifier.createReadStream(req.file.buffer).pipe(uploadedVideo);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Processing failed", error: err.message });
   }
 };
 
-module.exports = { extractAudioAndTranscribe };
+module.exports = { extractAudioAndGenerateNotes };

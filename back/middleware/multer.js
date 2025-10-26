@@ -1,29 +1,30 @@
 const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
 
-// Folder to save uploads
-const uploadFolder = path.join(__dirname, "../uploads");
-
-// Create folder if it doesn't exist
-if (!fs.existsSync(uploadFolder)) {
-  fs.mkdirSync(uploadFolder, { recursive: true });
-}
-
-// Multer storage configuration
-const storage = multer.diskStorage({
+// Configure multer to handle file uploads
+const storage = multer.memoryStorage({
   destination: function (req, file, cb) {
-    cb(null, uploadFolder); // save files here
+    cb(null, '');
   },
   filename: function (req, file, cb) {
-    cb(null, Date.now() + "-" + file.originalname); // unique filenames
-  },
+    cb(null, file.originalname);
+  }
 });
 
-// Multer instance
+// File filter to only allow video files
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith('video/')) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only video files are allowed!'), false);
+  }
+};
+
 const upload = multer({
-  storage,
-  limits: { fileSize: 200 * 1024 * 1024 }, // 200MB max
+  storage: storage,
+  fileFilter: fileFilter,
+  limits: {
+    fileSize: 500 * 1024 * 1024, // 500MB limit
+  },
 });
 
 module.exports = upload;

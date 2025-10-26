@@ -1,9 +1,9 @@
 const express = require("express");
 const router = express.Router();
-const upload = require("../middleware/multer"); // your multer setup
-const { extractAudioAndTranscribe } = require("../controllers/videoController");
+const upload = require("../middleware/multer");
+const { extractAudioAndGenerateNotes } = require("../controllers/videoController");
 
-// Upload video & process audio
-router.post("/upload-and-transcribe", upload.single("video"), extractAudioAndTranscribe);
+// Upload & process video
+router.post("/upload-and-process", upload.single("video"), extractAudioAndGenerateNotes);
 
 module.exports = router;
