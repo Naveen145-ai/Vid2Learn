@@ -1,43 +1,42 @@
+// src/components/UploadVideo.jsx
 import { useState } from "react";
 import { CloudArrowUpIcon } from "@heroicons/react/24/outline";
+import { API_BASE_URL, API_ENDPOINTS } from "../config";
 
-const UploadVideo = () => {
+const UploadVideo = ({ onUpload }) => {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [videoUrl, setVideoUrl] = useState("");
-  const [audioUrl, setAudioUrl] = useState("");
 
-  // Handle file selection
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
   };
 
-  // Handle upload
   const handleUpload = async () => {
     if (!file) return;
     setLoading(true);
 
     try {
-      // 1️⃣ Upload video to backend
       const formData = new FormData();
       formData.append("video", file);
       formData.append("title", file.name);
 
-      const res = await fetch("http://localhost:4000/api/video/upload-and-transcribe", {
+      const res = await fetch(`${API_BASE_URL}${API_ENDPOINTS.UPLOAD_VIDEO}`, {
         method: "POST",
         body: formData,
       });
 
-      if (!res.ok) throw new Error("Upload failed");
-
       const data = await res.json();
-      setVideoUrl(data.videoUrl);
-      setAudioUrl(data.audioUrl);
+      
+      if (!res.ok) {
+        throw new Error(data.message || "Upload failed");
+      }
 
-      alert("✅ Video uploaded and audio extracted successfully!");
+      onUpload(data.video);
+      alert("✅ Video processed successfully!");
+      setFile(null);
     } catch (err) {
       console.error("Upload error:", err);
-      alert("❌ Something went wrong during upload. Check backend logs.");
+      alert(`❌ Upload failed: ${err.message || 'Please check console for details'}`);
     }
 
     setLoading(false);
@@ -49,12 +48,9 @@ const UploadVideo = () => {
         Upload Educational Video
       </h2>
 
-      {/* Drag & Drop / File select */}
       <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-indigo-500">
         <CloudArrowUpIcon className="h-12 w-12 text-indigo-500 mb-3" />
-        <p className="text-gray-500 mb-3">
-          Drag & drop video here or click to select
-        </p>
+        <p className="text-gray-500 mb-3">Drag & drop video here or click to select</p>
         <input
           type="file"
           accept="video/*"
@@ -71,7 +67,6 @@ const UploadVideo = () => {
         {file && <p className="mt-2 text-gray-700">{file.name}</p>}
       </div>
 
-      {/* Upload button */}
       <button
         onClick={handleUpload}
         disabled={!file || loading}
@@ -79,26 +74,6 @@ const UploadVideo = () => {
       >
         {loading ? "Uploading..." : "Upload & Process"}
       </button>
-
-      {/* Display uploaded video URL */}
-      {videoUrl && (
-        <div className="mt-4">
-          <h3 className="font-semibold">Uploaded Video URL:</h3>
-          <a href={videoUrl} target="_blank" rel="noreferrer" className="text-indigo-500 underline">
-            {videoUrl}
-          </a>
-        </div>
-      )}
-
-      {/* Display extracted audio URL */}
-      {audioUrl && (
-        <div className="mt-2">
-          <h3 className="font-semibold">Extracted Audio URL:</h3>
-          <a href={audioUrl} target="_blank" rel="noreferrer" className="text-indigo-500 underline">
-            {audioUrl}
-          </a>
-        </div>
-      )}
     </div>
   );
 };
