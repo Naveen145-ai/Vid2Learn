@@ -1,66 +1,72 @@
-const ffmpeg = require("fluent-ffmpeg");
-const ffmpegStatic = require("ffmpeg-static");
 const fs = require("fs");
 const path = require("path");
-const cloudinary = require("cloudinary").v2;
+const ffmpeg = require("fluent-ffmpeg");
+const cloudinary = require("../config/cloudinary"); // your Cloudinary setup
 const Video = require("../models/videoModel");
+const { execFile } = require("child_process");
 
-ffmpeg.setFfmpegPath(ffmpegStatic);
+// Helper: transcribe audio using Ollama CLI
+const transcribeWithOllama = async (audioPath) => {
+  return new Promise((resolve, reject) => {
+    execFile(
+      "ollama",
+      ["run", "dimavz/whisper-tiny", "--input", fs.readFileSync(audioPath)],
+      (err, stdout, stderr) => {
+        if (err) return reject(err);
+        resolve(stdout.trim());
+      }
+    );
+  });
+};
 
-exports.uploadVideo = async (req, res) => {
+// Upload video, extract audio, transcribe
+const extractAudioAndTranscribe = async (req, res) => {
   try {
-    const videoUrl = req.file.path;
-    const title = req.file.originalname;
+    if (!req.file) return res.status(400).json({ message: "No video uploaded" });
 
-    const newVideo = new Video({ title, videoUrl });
-    await newVideo.save();
-
-    res.status(200).json({
-      message: "Video uploaded successfully to Cloudinary",
-      videoUrl,
-      videoId: newVideo._id,
+    // 1️⃣ Upload video to Cloudinary
+    const uploadedVideo = await cloudinary.uploader.upload(req.file.path, {
+      resource_type: "video",
     });
-  } catch (error) {
-    console.error("Upload error:", error);
-    res.status(500).json({ error: "Upload failed" });
+
+    // 2️⃣ Extract audio
+    const audioPath = path.join(__dirname, "../uploads", Date.now() + "-audio.mp3");
+    await new Promise((resolve, reject) => {
+      ffmpeg(req.file.path)
+        .output(audioPath)
+        .on("end", resolve)
+        .on("error", reject)
+        .run();
+    });
+
+    // 3️⃣ Upload audio to Cloudinary
+    const uploadedAudio = await cloudinary.uploader.upload(audioPath, {
+      resource_type: "auto",
+    });
+
+    // 4️⃣ Transcribe audio using Ollama CLI
+    const transcript = await transcribeWithOllama(audioPath);
+
+    // 5️⃣ Save to MongoDB
+    const newVideo = await Video.create({
+      title: req.file.originalname,
+      videoUrl: uploadedVideo.secure_url,
+      audioUrl: uploadedAudio.secure_url,
+      transcript,
+    });
+
+    // 6️⃣ Cleanup local files
+    fs.unlinkSync(req.file.path);
+    fs.unlinkSync(audioPath);
+
+    res.json({
+      message: "Video uploaded, audio extracted, and transcription done!",
+      video: newVideo,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Processing failed", error: err.message });
   }
 };
 
-exports.extractAudio = async (req, res) => {
-  try {
-    const { videoUrl } = req.body;
-    const outputPath = path.join("temp", `${Date.now()}.mp3`);
-
-    if (!fs.existsSync("temp")) fs.mkdirSync("temp");
-
-    ffmpeg(videoUrl)
-      .noVideo()
-      .audioCodec("libmp3lame")
-      .save(outputPath)
-      .on("end", async () => {
-        try {
-          const audioUpload = await cloudinary.uploader.upload(outputPath, {
-            folder: "vid2learn/audio",
-            resource_type: "video",
-          });
-
-          fs.unlinkSync(outputPath);
-
-          res.status(200).json({
-            message: "Audio extracted and uploaded to Cloudinary",
-            audioUrl: audioUpload.secure_url,
-          });
-        } catch (uploadErr) {
-          console.error(uploadErr);
-          res.status(500).json({ error: "Audio upload failed" });
-        }
-      })
-      .on("error", (err) => {
-        console.error("FFmpeg error:", err);
-        res.status(500).json({ error: "Error extracting audio" });
-      });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-};
+module.exports = { extractAudioAndTranscribe };

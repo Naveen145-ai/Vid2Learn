@@ -1,23 +1,9 @@
 const express = require("express");
-const multer = require("multer");
-const { CloudinaryStorage } = require("multer-storage-cloudinary");
-const { uploadVideo, extractAudio } = require("../controllers/videoController");
-const cloudinary = require("../config/cloudinary");
-
 const router = express.Router();
+const upload = require("../middleware/multer"); // your multer setup
+const { extractAudioAndTranscribe } = require("../controllers/videoController");
 
-// Cloudinary setup for Multer
-const videoStorage = new CloudinaryStorage({
-  cloudinary: require("cloudinary").v2,
-  params: {
-    folder: "vid2learn/videos",
-    resource_type: "video",
-  },
-});
-
-const upload = multer({ storage: videoStorage });
-
-router.post("/upload", upload.single("video"), uploadVideo);
-router.post("/extract-audio", extractAudio);
+// Upload video & process audio
+router.post("/upload-and-transcribe", upload.single("video"), extractAudioAndTranscribe);
 
 module.exports = router;
