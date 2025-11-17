@@ -16,6 +16,12 @@ const extractAudio = (inputPath) => new Promise((resolve, reject) => {
     .run();
 });
 
+// Helper to extract JSON from mixed text
+function extractJson(text) {
+  const match = text.match(/\{[\s\S]*\}/);
+  return match ? match[0] : null;
+}
+
 exports.extractAudioAndGenerateNotes = async (req, res) => {
   console.log("📩 Received video upload request...");
 
@@ -43,22 +49,53 @@ exports.extractAudioAndGenerateNotes = async (req, res) => {
 
     console.log("🎧 Audio uploaded:", audioResult.secure_url);
 
-    // Ollama AI request
+    // AI prompt
     const prompt = `
-      You are a learning assistant. Transcribe and summarize this audio:
-      ${audioResult.secure_url}
-      Return JSON with keys: transcript, summary, keyConcepts, quiz
-    `;
+You are a learning assistant. 
+Transcribe and summarize the audio from this link: ${audioResult.secure_url}
 
-    const ollama = spawn("ollama", ["run", "deepseek-r1:8b", "--prompt", prompt]);
+Return clean JSON:
+{
+  "transcript": "",
+  "summary": "",
+  "keyConcepts": [],
+  "quiz": []
+}
+`;
+
+    // Use only 1.5B (or 5B if installed)
+    const ollama = spawn("ollama", ["run", "deepseek-r1:1.5b"]);
 
     let output = "";
-    ollama.stdout.on("data", (d) => (output += d.toString()));
-    ollama.stderr.on("data", (err) => console.error("Ollama error:", err.toString()));
 
+    // Collect response
+    ollama.stdout.on("data", (d) => {
+      output += d.toString();
+    });
+
+    // Errors
+    ollama.stderr.on("data", (err) => {
+      console.error("Ollama error:", err.toString());
+    });
+
+    // Send prompt
+    ollama.stdin.write(prompt);
+    ollama.stdin.end();
+
+    // Finished
     ollama.on("close", async () => {
       try {
-        const parsed = JSON.parse(output);
+        // Remove hidden chars
+        const cleaned = output.replace(/[\x00-\x1F]/g, "");
+
+        // Extract pure JSON part
+        const jsonString = extractJson(cleaned);
+
+        if (!jsonString) {
+          throw new Error("No valid JSON found from AI");
+        }
+
+        const parsed = JSON.parse(jsonString);
 
         const saved = await Video.create({
           title: req.file.originalname,
@@ -75,11 +112,13 @@ exports.extractAudioAndGenerateNotes = async (req, res) => {
 
         console.log("✅ Saved video data!");
         res.json({ success: true, video: saved });
+
       } catch (e) {
-        console.error("❌ AI output parse failed:", e.message);
+        console.error("❌ AI output parse failed:", e);
         res.status(500).json({ message: "AI parsing failed", error: e.message });
       }
     });
+
   } catch (err) {
     console.error("🔥 Upload or extraction failed:", err.message);
     res.status(500).json({ message: "Upload failed", error: err.message });
