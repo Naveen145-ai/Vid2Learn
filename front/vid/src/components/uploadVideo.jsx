@@ -3,7 +3,7 @@ import { useState } from "react";
 import { CloudArrowUpIcon } from "@heroicons/react/24/outline";
 import { API_BASE_URL, API_ENDPOINTS } from "../config";
 
-const UploadVideo = ({ onUpload }) => {
+const UploadVideo = ({ onUpload = () => {} }) => { // <-- default function added
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -31,7 +31,7 @@ const UploadVideo = ({ onUpload }) => {
         throw new Error(data.message || "Upload failed");
       }
 
-      onUpload(data.video);
+      onUpload(data.video); // now safe even if parent did not pass anything
       alert("✅ Video processed successfully!");
       setFile(null);
     } catch (err) {
