@@ -1,5 +1,5 @@
 // back/config/cloudinary.js
-const cloudinary = require("cloudinary").v2;
+/*const cloudinary = require("cloudinary").v2;
 
 const connectCloudinary = async () => {
   cloudinary.config({
@@ -11,4 +11,4 @@ const connectCloudinary = async () => {
   console.log("✅ Cloudinary connected successfully");
 };
 
-module.exports = connectCloudinary;
+module.exports = connectCloudinary;*/

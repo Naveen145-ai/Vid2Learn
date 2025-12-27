@@ -1,45 +1,52 @@
-// src/components/UploadVideo.jsx
 import { useState } from "react";
 import { CloudArrowUpIcon } from "@heroicons/react/24/outline";
 import { API_BASE_URL, API_ENDPOINTS } from "../config";
 
-const UploadVideo = ({ onUpload = () => {} }) => { // <-- default function added
+const UploadVideo = ({ onUpload = () => {} }) => {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const handleFileChange = (e) => {
-    setFile(e.target.files[0]);
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+    }
   };
 
   const handleUpload = async () => {
     if (!file) return;
+
     setLoading(true);
 
     try {
       const formData = new FormData();
-      formData.append("video", file);
+      formData.append("video", file); // MUST be "video"
       formData.append("title", file.name);
 
-      const res = await fetch(`${API_BASE_URL}${API_ENDPOINTS.UPLOAD_VIDEO}`, {
-        method: "POST",
-        body: formData,
-      });
+      const res = await fetch(
+        `${API_BASE_URL}${API_ENDPOINTS.UPLOAD_VIDEO}`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
 
       const data = await res.json();
-      
+
       if (!res.ok) {
         throw new Error(data.message || "Upload failed");
       }
 
-      onUpload(data.video); // now safe even if parent did not pass anything
+      // Send processed video data to parent
+      onUpload(data.video);
+
       alert("✅ Video processed successfully!");
       setFile(null);
     } catch (err) {
-      console.error("Upload error:", err);
-      alert(`❌ Upload failed: ${err.message || 'Please check console for details'}`);
+      console.error("❌ Upload error:", err);
+      alert(`Upload failed: ${err.message}`);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
@@ -48,31 +55,41 @@ const UploadVideo = ({ onUpload = () => {} }) => { // <-- default function added
         Upload Educational Video
       </h2>
 
-      <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-indigo-500">
+      <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-300 rounded-xl">
         <CloudArrowUpIcon className="h-12 w-12 text-indigo-500 mb-3" />
-        <p className="text-gray-500 mb-3">Drag & drop video here or click to select</p>
+
+        <p className="text-gray-500 mb-3">
+          Select an educational video to process
+        </p>
+
         <input
           type="file"
           accept="video/*"
-          className="hidden"
           id="videoUpload"
+          className="hidden"
           onChange={handleFileChange}
         />
+
         <label
           htmlFor="videoUpload"
-          className="px-4 py-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600"
+          className="px-4 py-2 bg-indigo-500 text-white rounded-md cursor-pointer hover:bg-indigo-600"
         >
-          Choose File
+          Choose Video
         </label>
-        {file && <p className="mt-2 text-gray-700">{file.name}</p>}
+
+        {file && (
+          <p className="mt-3 text-sm text-gray-700">
+            Selected: <strong>{file.name}</strong>
+          </p>
+        )}
       </div>
 
       <button
         onClick={handleUpload}
         disabled={!file || loading}
-        className="mt-4 w-full bg-indigo-500 text-white font-semibold py-2 rounded-xl hover:bg-indigo-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
+        className="mt-4 w-full bg-indigo-500 text-white font-semibold py-2 rounded-xl hover:bg-indigo-600 disabled:bg-gray-300"
       >
-        {loading ? "Uploading..." : "Upload & Process"}
+        {loading ? "Processing..." : "Upload & Process"}
       </button>
     </div>
   );

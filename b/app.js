@@ -3,13 +3,13 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const videoRoutes = require("./routes/videoRoutes");
 const connectDb = require("./config/mongoDb");
-const connectCloudinary = require("./config/cloudinary");
+//const connectCloudinary = require("./config/cloudinary");
 
 dotenv.config();
 const app = express();
 
 connectDb();
-connectCloudinary();
+//connectCloudinary();
 
 // Middleware
 app.use(cors({
