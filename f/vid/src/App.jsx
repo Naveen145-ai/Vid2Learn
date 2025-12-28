@@ -1,30 +1,23 @@
-import { useState } from "react";
-import UploadVideo from "./components/UploadVideo";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Landing from "./pages/Landing";
+import HomePage from "./pages/HomePage";
+import UploadPage from "./pages/UploadPage";
+import LoginPage from "./pages/LoginPage";
+import SignupPage from "./pages/SignupPage";
+import ProfileHistory from "./pages/ProfileHistory";
 
 function App() {
-  const [video, setVideo] = useState(null);
-
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      <UploadVideo onUpload={setVideo} />
-
-      {video && (
-        <div className="mt-6 bg-white p-4 rounded-xl shadow">
-          <h3 className="text-xl font-bold">{video.title}</h3>
-
-          <p className="mt-2 text-gray-700">
-            <strong>Summary:</strong> {video.summary}
-          </p>
-
-          <h4 className="mt-3 font-semibold">Key Concepts</h4>
-          <ul className="list-disc pl-6">
-            {video.keyConcepts.map((k, i) => (
-              <li key={i}>{k}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/home" element={<HomePage />} />
+        <Route path="/upload" element={<UploadPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        <Route path="/profile-history" element={<ProfileHistory />} />
+      </Routes>
+    </Router>
   );
 }
 

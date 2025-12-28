@@ -13,20 +13,17 @@ const {
   StartTranscriptionJobCommand,
   GetTranscriptionJobCommand,
 } = require("@aws-sdk/client-transcribe");
-const {
-  BedrockRuntimeClient,
-  InvokeModelCommand,
-} = require("@aws-sdk/client-bedrock-runtime");
+const Groq = require("groq-sdk");
 
 const Video = require("../models/videoModel");
 
 // Tell fluent-ffmpeg where ffmpeg is
 ffmpeg.setFfmpegPath(ffmpegPath);
 
-// AWS clients
+// AWS & Groq clients
 const s3 = new S3Client({ region: process.env.AWS_REGION });
 const transcribe = new TranscribeClient({ region: process.env.AWS_REGION });
-const bedrock = new BedrockRuntimeClient({ region: process.env.AWS_REGION });
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 // --------------------
 // Extract audio
@@ -70,6 +67,25 @@ async function uploadToS3(filePath) {
 
   const s3Uri = `s3://${process.env.S3_BUCKET_NAME}/${key}`;
   console.log("✅ Audio uploaded to S3:", s3Uri);
+  return s3Uri;
+}
+
+async function uploadVideoToS3(videoPath) {
+  console.log("☁️ Uploading video to S3...");
+  const fileStream = fs.createReadStream(videoPath);
+  const key = `videos/${uuid()}.mp4`;
+
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: process.env.S3_BUCKET_NAME,
+      Key: key,
+      Body: fileStream,
+      ContentType: "video/mp4",
+    })
+  );
+
+  const s3Uri = `s3://${process.env.S3_BUCKET_NAME}/${key}`;
+  console.log("✅ Video uploaded to S3:", s3Uri);
   return s3Uri;
 }
 
@@ -137,31 +153,25 @@ Transcript: ${transcript}
 Return ONLY valid JSON, no other text.`;
 
   try {
-    const command = new InvokeModelCommand({
-      modelId: "anthropic.claude-3-sonnet-20240229-v1:0",
-      body: JSON.stringify({
-        anthropic_version: "bedrock-2023-06-01",
-        max_tokens: 1024,
-        messages: [{ role: "user", content: prompt }],
-      }),
+    const message = await groq.chat.completions.create({
+      messages: [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      model: "llama-3.3-70b-versatile",
+      max_tokens: 1024,
     });
 
-    const response = await bedrock.send(command);
-    const bodyString = Buffer.from(response.body).toString();
-    const parsedResponse = JSON.parse(bodyString);
-    const text = parsedResponse.content[0].text;
-
+    const text = message.choices[0].message.content;
     const aiData = JSON.parse(text);
     console.log("✅ AI notes generated successfully");
     return aiData;
   } catch (error) {
-    console.error("❌ Bedrock Error Details:", {
-      message: error.message,
-      code: error.__type,
-      statusCode: error.$metadata?.httpStatusCode,
-    });
+    console.error("❌ Groq Error:", error.message);
     
-    // Return default structure if Bedrock fails
+    // Return default structure if Groq fails
     return {
       title: "Lecture Notes",
       summary: transcript.substring(0, 200),
@@ -190,6 +200,9 @@ exports.extractAudioAndGenerateNotes = async (req, res) => {
 
     // Upload audio to S3
     const s3Uri = await uploadToS3(audioPath);
+    
+    // Upload video to S3
+    const videoS3Uri = await uploadVideoToS3(videoPath);
 
     // Transcribe
     const transcript = await transcribeAudio(s3Uri);
@@ -200,6 +213,8 @@ exports.extractAudioAndGenerateNotes = async (req, res) => {
     // Save to MongoDB
     const saved = await Video.create({
       title: aiData.title || req.file.originalname,
+      videoUrl: videoS3Uri,
+      audioUrl: s3Uri,
       transcript,
       summary: aiData.summary || "",
       keyConcepts: aiData.keyConcepts || [],
@@ -215,5 +230,39 @@ exports.extractAudioAndGenerateNotes = async (req, res) => {
   } catch (err) {
     console.error("❌ Error processing video:", err);
     res.status(500).json({ error: err.message });
+  }
+};
+
+// --------------------
+// Test Google API
+// --------------------
+exports.testGoogleAPI = async (req, res) => {
+  try {
+    console.log("🧪 Testing Groq API...");
+    const message = await groq.chat.completions.create({
+      messages: [
+        {
+          role: "user",
+          content: "Say hello in one word",
+        },
+      ],
+      model: "llama-3.3-70b-versatile",
+    });
+
+    const text = message.choices[0].message.content;
+    
+    console.log("✅ Groq API is working!");
+    res.json({ 
+      success: true, 
+      message: "Groq API is working correctly",
+      response: text
+    });
+  } catch (error) {
+    console.error("❌ Groq Test Error:", error.message);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      hint: "Check if your Groq API key is valid"
+    });
   }
 };

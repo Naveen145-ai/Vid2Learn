@@ -1,0 +1,361 @@
+/* ============================================
+   HOME PAGE STYLES
+   ============================================ */
+
+.home-page {
+  min-height: 100vh;
+  width: 100%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 40%, #f093fb 100%);
+  background-attachment: fixed;
+  padding: 40px 20px;
+  margin: 0;
+}
+
+.home-header {
+  text-align: center;
+  color: white;
+  margin-bottom: 60px;
+  animation: slideDown 0.6s ease-out;
+}
+
+.home-header h1 {
+  font-size: 48px;
+  font-weight: 800;
+  margin-bottom: 16px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.home-header p {
+  font-size: 20px;
+  opacity: 0.95;
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+.home-content {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* Grid Section */
+.home-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+  margin-bottom: 60px;
+  width: 100%;
+  padding: 0 20px;
+  box-sizing: border-box;
+}
+
+.home-card {
+  background: white;
+  border-radius: 16px;
+  padding: 32px 24px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  border: 2px solid transparent;
+}
+
+.home-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+  border-color: #667eea;
+}
+
+.home-card-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  display: inline-block;
+  width: 70px;
+  height: 70px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+}
+
+.home-card-blue {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.home-card-purple {
+  background: linear-gradient(135deg, #a855f7 0%, #d946ef 100%);
+}
+
+.home-card-pink {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.home-card-green {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.home-card-yellow {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+}
+
+.home-card-indigo {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+}
+
+.home-card h3 {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: #1f2937;
+}
+
+.home-card p {
+  font-size: 16px;
+  color: #6b7280;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Workflow Section */
+.home-workflow {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  padding: 48px 40px;
+  margin-bottom: 60px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+  box-sizing: border-box;
+}
+
+.home-workflow h2 {
+  text-align: center;
+  font-size: 36px;
+  font-weight: 800;
+  margin-bottom: 40px;
+  color: #1f2937;
+}
+
+.home-workflow-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+  width: 100%;
+}
+
+.home-workflow-step {
+  text-align: center;
+  padding: 24px;
+  position: relative;
+}
+
+.home-workflow-number {
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 800;
+  color: white;
+  margin: 0 auto 16px;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.home-workflow-step h3 {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #1f2937;
+}
+
+.home-workflow-step p {
+  font-size: 16px;
+  color: #6b7280;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* CTA Section */
+.home-cta {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 40%, #f093fb 100%);
+  border-radius: 20px;
+  padding: 60px 40px;
+  text-align: center;
+  color: white;
+  margin-bottom: 40px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  box-sizing: border-box;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.home-cta h2 {
+  font-size: 36px;
+  font-weight: 800;
+  margin-bottom: 16px;
+}
+
+.home-cta p {
+  font-size: 18px;
+  opacity: 0.95;
+  margin-bottom: 32px;
+  line-height: 1.6;
+}
+
+.home-cta-btn {
+  background: white;
+  color: #667eea;
+  padding: 16px 48px;
+  font-size: 18px;
+  font-weight: 700;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+.home-cta-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+.home-cta-btn:active {
+  transform: scale(0.98);
+}
+
+/* Animations */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .home-page {
+    padding: 24px 16px;
+  }
+
+  .home-header h1 {
+    font-size: 32px;
+  }
+
+  .home-header p {
+    font-size: 16px;
+  }
+
+  .home-grid {
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+
+  .home-card {
+    padding: 24px 16px;
+  }
+
+  .home-workflow {
+    padding: 32px 20px;
+  }
+
+  .home-workflow h2 {
+    font-size: 28px;
+    margin-bottom: 30px;
+  }
+
+  .home-cta {
+    padding: 40px 24px;
+  }
+
+  .home-cta h2 {
+    font-size: 28px;
+  }
+
+  .home-cta p {
+    font-size: 16px;
+  }
+
+  .home-cta-btn {
+    padding: 14px 40px;
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .home-page {
+    padding: 16px 12px;
+  }
+
+  .home-header h1 {
+    font-size: 24px;
+    margin-bottom: 12px;
+  }
+
+  .home-header p {
+    font-size: 14px;
+  }
+
+  .home-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-bottom: 30px;
+  }
+
+  .home-card {
+    padding: 20px 16px;
+  }
+
+  .home-card h3 {
+    font-size: 18px;
+  }
+
+  .home-card p {
+    font-size: 14px;
+  }
+
+  .home-workflow {
+    padding: 24px 16px;
+    margin-bottom: 30px;
+  }
+
+  .home-workflow h2 {
+    font-size: 22px;
+    margin-bottom: 20px;
+  }
+
+  .home-workflow-steps {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .home-cta {
+    padding: 30px 20px;
+    margin-bottom: 30px;
+  }
+
+  .home-cta h2 {
+    font-size: 22px;
+    margin-bottom: 12px;
+  }
+
+  .home-cta p {
+    font-size: 14px;
+    margin-bottom: 24px;
+  }
+
+  .home-cta-btn {
+    padding: 12px 32px;
+    font-size: 14px;
+  }
+}

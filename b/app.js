@@ -1,11 +1,13 @@
+const dotenv = require("dotenv");
+dotenv.config();
+
 const express = require("express");
 const cors = require("cors");
-const dotenv = require("dotenv");
 const videoRoutes = require("./routes/videoRoutes");
+const authRoutes = require("./routes/authRoutes");
 const connectDb = require("./config/mongoDb");
 //const connectCloudinary = require("./config/cloudinary");
 
-dotenv.config();
 const app = express();
 
 connectDb();
@@ -25,6 +27,7 @@ app.use(express.urlencoded({ extended: true, limit: "100mb" }));
 app.use("/uploads", express.static("uploads"));
 
 // Routes
+app.use("/api/auth", authRoutes);
 app.use("/api/video", videoRoutes);
 
 const PORT = process.env.PORT || 4000;
