@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import KeyConceptsDisplay from "../components/KeyConceptsDisplay";
 import "../styles/profile-history.css";
 
 export default function ProfileHistory() {
@@ -105,19 +106,7 @@ export default function ProfileHistory() {
                       </div>
 
                       <div className="history-section">
-                        <h4>🎯 Concepts</h4>
-                        <div className="history-concepts">
-                          {item.keyConcepts?.slice(0, 3).map((concept, idx) => (
-                            <span key={idx} className="history-concept-tag">
-                              {concept}
-                            </span>
-                          ))}
-                          {item.keyConcepts?.length > 3 && (
-                            <span className="history-concept-tag">
-                              +{item.keyConcepts.length - 3} more
-                            </span>
-                          )}
-                        </div>
+                        <KeyConceptsDisplay concepts={item.keyConcepts} />
                       </div>
 
                       <div className="history-section">

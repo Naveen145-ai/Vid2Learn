@@ -114,18 +114,20 @@ export default function HomePage() {
           </div>
 
           <div className="home-content">
-            {/* Features Grid */}
-            <div className="home-grid">
-              {features.map((feature, index) => (
-                <div key={index} className="home-card">
-                  <div className="home-card-icon">
-                    {feature.icon}
+            {/* Features Grid - Only show when NOT logged in */}
+            {!user && (
+              <div className="home-grid">
+                {features.map((feature, index) => (
+                  <div key={index} className="home-card">
+                    <div className="home-card-icon">
+                      {feature.icon}
+                    </div>
+                    <h3>{feature.title}</h3>
+                    <p>{feature.description}</p>
                   </div>
-                  <h3>{feature.title}</h3>
-                  <p>{feature.description}</p>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
 
             {/* Workflow Section */}
             <div className="home-workflow">

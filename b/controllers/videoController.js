@@ -90,8 +90,38 @@ async function uploadVideoToS3(videoPath) {
 }
 
 // --------------------
-// Transcribe audio
+// Transcribe audio with retry logic
 // --------------------
+async function fetchTranscriptWithRetry(transcriptUrl, maxRetries = 3) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`📥 Fetching transcript (attempt ${attempt}/${maxRetries})...`);
+      const { data: json } = await axios.get(transcriptUrl, {
+        timeout: 30000, // 30 second timeout
+      });
+      const transcript = json.results.transcripts[0].transcript;
+      console.log("📝 Transcript length:", transcript.length, "characters");
+      return transcript;
+    } catch (error) {
+      console.warn(
+        `⚠️ Attempt ${attempt} failed:`,
+        error.code || error.message
+      );
+
+      if (attempt === maxRetries) {
+        throw new Error(
+          `Failed to fetch transcript after ${maxRetries} attempts: ${error.message}`
+        );
+      }
+
+      // Exponential backoff: 2s, 4s, 8s
+      const delayMs = Math.pow(2, attempt) * 1000;
+      console.log(`⏳ Retrying in ${delayMs / 1000}s...`);
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+}
+
 async function transcribeAudio(s3Uri) {
   console.log("🎤 Starting AWS Transcribe job...");
   const jobName = `job-${uuid()}`;
@@ -107,7 +137,10 @@ async function transcribeAudio(s3Uri) {
 
   console.log("⏳ Waiting for transcription to complete...");
 
-  while (true) {
+  let pollCount = 0;
+  const maxPolls = 240; // 20 minutes max (240 * 5s)
+
+  while (pollCount < maxPolls) {
     const data = await transcribe.send(
       new GetTranscriptionJobCommand({ TranscriptionJobName: jobName })
     );
@@ -119,19 +152,58 @@ async function transcribeAudio(s3Uri) {
       const transcriptUrl =
         data.TranscriptionJob.Transcript.TranscriptFileUri;
 
-      // Use Axios to fetch transcript JSON
-      const { data: json } = await axios.get(transcriptUrl);
-      const transcript = json.results.transcripts[0].transcript;
-
-      console.log("📝 Transcript length:", transcript.length, "characters");
+      // Fetch transcript with retry logic
+      const transcript = await fetchTranscriptWithRetry(transcriptUrl);
       return transcript;
     }
 
     if (status === "FAILED") {
-      throw new Error("❌ Transcription failed");
+      throw new Error(
+        `❌ Transcription failed: ${data.TranscriptionJob.FailureReason || "Unknown reason"}`
+      );
     }
 
+    pollCount++;
+    console.log(
+      `Status: ${status} (${pollCount}/${maxPolls}) - next check in 5s...`
+    );
     await new Promise((r) => setTimeout(r, 5000));
+  }
+
+  throw new Error("Transcription polling timeout - took longer than 20 minutes");
+}
+
+// --------------------
+// Clean up transcript for better readability
+// --------------------
+async function improveTranscript(transcript) {
+  console.log("🔧 Improving transcript grammar and punctuation...");
+  const cleanupPrompt = `You are an expert English editor. Fix the grammar, punctuation, and capitalization in this auto-generated transcript while preserving the original meaning and content exactly:
+
+Transcript:
+${transcript}
+
+Return ONLY the cleaned-up transcript, nothing else.`;
+
+  try {
+    const message = await groq.chat.completions.create({
+      messages: [
+        {
+          role: "user",
+          content: cleanupPrompt,
+        },
+      ],
+      model: "llama-3.3-70b-versatile",
+      max_tokens: 2048,
+      temperature: 0.1,
+    });
+
+    const cleanedTranscript = message.choices[0].message.content || transcript;
+    console.log("✅ Transcript improved");
+    return cleanedTranscript;
+  } catch (error) {
+    console.warn("⚠️ Transcript improvement skipped:", error.message);
+    return transcript; // Return original if improvement fails
   }
 }
 
@@ -140,17 +212,63 @@ async function transcribeAudio(s3Uri) {
 // --------------------
 async function generateNotes(transcript) {
   console.log("🤖 Generating educational notes from transcript...");
-  const prompt = `You are an educational assistant. From this transcript, generate valid JSON with these exact fields:
+  const prompt = `You are an expert educational assistant. From the transcript below, extract exactly 5 key concepts with concise 2-3 line definitions and generate a quiz.
+
+Return ONLY this JSON structure:
 {
-  "title": "a descriptive title",
-  "summary": "brief summary",
-  "keyConcepts": ["concept1", "concept2"],
-  "quiz": [{"question": "?", "options": ["a", "b"], "answer": "a"}]
+  "title": "Descriptive title (3-5 words)",
+  "summary": "Concise 1-2 sentence overview of the content",
+  "keyConcepts": [
+    {"topic": "Concept Name", "definition": "2-3 line explanation of this concept from the transcript"},
+    {"topic": "Concept Name", "definition": "2-3 line explanation"},
+    {"topic": "Concept Name", "definition": "2-3 line explanation"},
+    {"topic": "Concept Name", "definition": "2-3 line explanation"},
+    {"topic": "Concept Name", "definition": "2-3 line explanation"}
+  ],
+  "quiz": [
+    {"question": "Multiple choice question?", "options": ["Option A", "Option B", "Option C"], "answer": "Option A"},
+    {"question": "Another question?", "options": ["Option A", "Option B", "Option C"], "answer": "Option B"}
+  ]
 }
 
-Transcript: ${transcript}
+REQUIREMENTS:
+- Extract EXACTLY 5 unique key concepts that are most important from the transcript.
+- Each definition must be 2-3 concise sentences, drawn from the transcript content.
+- Quiz should have 2-3 questions based on the concepts discussed.
+- Return ONLY raw JSON, no markdown fences, no explanations.
+- Do not include any text outside this JSON object.
 
-Return ONLY valid JSON, no other text.`;
+Transcript:
+${transcript}`;
+
+  // Robustly extract JSON even if the model wraps it in code fences or extra text
+  function parseJsonFromText(text) {
+    // Try direct parse first
+    try {
+      return JSON.parse(text);
+    } catch (_) {}
+
+    // Extract from fenced code block ```json ... ```
+    const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (fenced && fenced[1]) {
+      const candidate = fenced[1].trim();
+      try {
+        return JSON.parse(candidate);
+      } catch (_) {}
+    }
+
+    // Extract substring between first { and last }
+    const firstBrace = text.indexOf("{");
+    const lastBrace = text.lastIndexOf("}");
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      const candidate = text.slice(firstBrace, lastBrace + 1).trim();
+      try {
+        return JSON.parse(candidate);
+      } catch (_) {}
+    }
+
+    throw new Error("LLM response was not valid JSON");
+  }
 
   try {
     const message = await groq.chat.completions.create({
@@ -162,20 +280,34 @@ Return ONLY valid JSON, no other text.`;
       ],
       model: "llama-3.3-70b-versatile",
       max_tokens: 1024,
+      // If supported, ask Groq for strict JSON output
+      // Some providers accept response_format: { type: "json_object" }
+      // This call will be ignored if the model doesn't support it
+      response_format: { type: "json_object" },
+      temperature: 0.2,
     });
 
-    const text = message.choices[0].message.content;
-    const aiData = JSON.parse(text);
+    const text = message.choices[0].message.content || "";
+    const aiData = parseJsonFromText(text);
     console.log("✅ AI notes generated successfully");
     return aiData;
   } catch (error) {
     console.error("❌ Groq Error:", error.message);
+    // Helpful debug of original response (truncated)
+    if (error && error.stack) {
+      console.error("Stack:", error.stack.split("\n")[0]);
+    }
+    // Provide a safe fallback structure
     
     // Return default structure if Groq fails
     return {
       title: "Lecture Notes",
       summary: transcript.substring(0, 200),
-      keyConcepts: ["Topic 1", "Topic 2"],
+      keyConcepts: [
+        { topic: "Topic 1", definition: "Key information about the first concept" },
+        { topic: "Topic 2", definition: "Key information about the second concept" },
+        { topic: "Topic 3", definition: "Key information about the third concept" },
+      ],
       quiz: [{ question: "What was discussed?", options: ["Option A", "Option B"], answer: "Option A" }],
     };
   }
@@ -207,15 +339,18 @@ exports.extractAudioAndGenerateNotes = async (req, res) => {
     // Transcribe
     const transcript = await transcribeAudio(s3Uri);
 
+    // Improve transcript grammar
+    const cleanTranscript = await improveTranscript(transcript);
+
     // Generate AI Notes
-    const aiData = await generateNotes(transcript);
+    const aiData = await generateNotes(cleanTranscript);
 
     // Save to MongoDB
     const saved = await Video.create({
       title: aiData.title || req.file.originalname,
       videoUrl: videoS3Uri,
       audioUrl: s3Uri,
-      transcript,
+      transcript: cleanTranscript,
       summary: aiData.summary || "",
       keyConcepts: aiData.keyConcepts || [],
       quiz: aiData.quiz || [],

@@ -3,21 +3,23 @@
    ============================================ */
 
 .signup-page {
+  width: 100vw;
   min-height: 100vh;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 75%, #0ea5e9 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--spacing-lg);
+  padding: 60px 40px;
   position: relative;
-  overflow: hidden;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 .signup-page::before {
   content: '';
-  position: absolute;
+  position: fixed;
   top: 10%;
-  left: -10%;
+  left: 5%;
   width: 500px;
   height: 500px;
   background: rgba(255, 255, 255, 0.1);
@@ -28,9 +30,9 @@
 
 .signup-page::after {
   content: '';
-  position: absolute;
+  position: fixed;
   bottom: 10%;
-  right: -10%;
+  right: 5%;
   width: 500px;
   height: 500px;
   background: rgba(255, 255, 255, 0.1);
@@ -43,7 +45,10 @@
   position: relative;
   z-index: 10;
   width: 100%;
-  max-width: 450px;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .signup-header {
@@ -252,7 +257,57 @@
   color: var(--white);
 }
 
-.signup-footer {
+@media (max-width: 1024px) {
+  .signup-page {
+    grid-template-columns: 1fr;
+    gap: 40px;
+    padding: 40px 20px;
+  }
+
+  .signup-container {
+    max-width: 450px;
+  }
+}
+
+@media (max-width: 768px) {
+  .signup-page {
+    grid-template-columns: 1fr;
+    gap: 30px;
+    padding: 30px 20px;
+  }
+
+  .signup-card {
+    padding: 30px 20px;
+  }
+
+  .signup-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .signup-card h2 {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .signup-page {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    padding: 20px;
+  }
+
+  .signup-card {
+    padding: 20px 16px;
+  }
+
+  .signup-header h1 {
+    font-size: 1.3rem;
+  }
+
+  .signup-card h2 {
+    font-size: 1.3rem;
+  }
+}.signup-footer {
   text-align: center;
   color: rgba(255, 255, 255, 0.8);
   font-size: var(--font-size-xs);

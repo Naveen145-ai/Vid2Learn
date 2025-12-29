@@ -2,6 +2,7 @@ import { useState } from "react";
 import { CloudArrowUpIcon, CheckCircleIcon, DocumentTextIcon, StarIcon, LightBulbIcon } from "@heroicons/react/24/outline";
 import { API_BASE_URL, API_ENDPOINTS } from "../config";
 import { useNavigate } from "react-router-dom";
+import KeyConceptsDisplay from "../components/KeyConceptsDisplay";
 import "../styles/upload-premium.css";
 
 export default function UploadPage() {
@@ -225,19 +226,7 @@ export default function UploadPage() {
 
                   {/* Key Concepts */}
                   <div className="results-block">
-                    <h4 className="results-section-title">🎯 Key Concepts</h4>
-                    {video.keyConcepts && video.keyConcepts.length > 0 ? (
-                      <div className="concepts-list">
-                        {video.keyConcepts.map((concept, i) => (
-                          <div key={i} className="concept-item">
-                            <div className="concept-number">{i + 1}</div>
-                            <p className="concept-text">{concept}</p>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="no-content">No concepts found</p>
-                    )}
+                    <KeyConceptsDisplay concepts={video.keyConcepts} />
                   </div>
 
                   {/* Quiz Questions */}

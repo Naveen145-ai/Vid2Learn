@@ -19,7 +19,8 @@ const videoSchema = new mongoose.Schema({
   },
   keyConcepts: [
     {
-      type: String,
+      topic: String,
+      definition: String,
     },
   ],
   quiz: [
