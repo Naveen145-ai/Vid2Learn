@@ -144,8 +144,8 @@ export default function UploadPage() {
           <p>Convert your educational videos into powerful study materials instantly</p>
         </div>
 
-        <div className="upload-container">
-          {/* Left Column - Upload */}
+        <div className="upload-content">
+          {/* Left Column - Upload (50%) */}
           <div className="upload-section">
             <div className="upload-card">
               <h2>Select Your Video</h2>
@@ -189,116 +189,99 @@ export default function UploadPage() {
             </div>
           </div>
 
-          {/* Right Column - Results */}
-          {video ? (
-            <div className="results-section">
-              <div className="success-badge">
-                <div className="success-icon">✓</div>
-                <div className="success-content">
-                  <h3>Processing Complete!</h3>
-                  <p>Your video has been analyzed. Study materials are ready below.</p>
-                </div>
-              </div>
-
-              <div className="tabs-container">
-                <button
-                  onClick={() => setActiveTab("summary")}
-                  className={`tab-btn ${activeTab === "summary" ? "active" : ""}`}
-                >
-                  📝 Summary
-                </button>
-                <button
-                  onClick={() => setActiveTab("concepts")}
-                  className={`tab-btn ${activeTab === "concepts" ? "active" : ""}`}
-                >
-                  🎯 Concepts
-                </button>
-                <button
-                  onClick={() => setActiveTab("quiz")}
-                  className={`tab-btn ${activeTab === "quiz" ? "active" : ""}`}
-                >
-                  ❓ Quiz
-                </button>
-                <button
-                  onClick={() => setActiveTab("transcript")}
-                  className={`tab-btn ${activeTab === "transcript" ? "active" : ""}`}
-                >
-                  📄 Transcript
-                </button>
-              </div>
-
-              <div className="results-card">
-                <div>
-                  <h3>📺 {video.title}</h3>
-                </div>
-
-                <div>
-                  <h4 style={{ color: "rgba(16, 185, 129, 0.9)", fontSize: "18px", fontWeight: "700", margin: "0 0 12px 0" }}>📝 Summary</h4>
-                  <div className="summary-text">
-                    {video.summary || "No summary available"}
+          {/* Right Column - Results (50%) */}
+          <div className="results-section">
+            {video ? (
+              <>
+                <div className="success-badge">
+                  <div className="success-icon">✓</div>
+                  <div className="success-content">
+                    <h3>Processing Complete!</h3>
+                    <p>Your study materials are ready.</p>
                   </div>
                 </div>
 
-                <div>
-                  <h4 style={{ color: "rgba(16, 185, 129, 0.9)", fontSize: "18px", fontWeight: "700", margin: "0 0 12px 0" }}>📄 Transcript</h4>
-                  <div className="transcript-text">
-                    {video.transcript || "No transcript available"}
+                <div className="results-container">
+                  {/* Title */}
+                  <div className="results-block">
+                    <h3 className="results-title">📺 {video.title}</h3>
                   </div>
-                </div>
 
-                <div>
-                  <h4 style={{ color: "rgba(16, 185, 129, 0.9)", fontSize: "18px", fontWeight: "700", margin: "0 0 12px 0" }}>🎯 Key Concepts</h4>
-                  {video.keyConcepts && video.keyConcepts.length > 0 ? (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                      {video.keyConcepts.map((concept, i) => (
-                        <div key={i} className="concept-item">
-                          <div className="concept-number">{i + 1}</div>
-                          <p className="concept-text">{concept}</p>
-                        </div>
-                      ))}
+                  {/* Summary */}
+                  <div className="results-block">
+                    <h4 className="results-section-title">📝 Summary</h4>
+                    <div className="results-content">
+                      {video.summary || "No summary available"}
                     </div>
-                  ) : (
-                    <p style={{ color: "rgba(255, 255, 255, 0.6)" }}>No concepts found</p>
-                  )}
-                </div>
+                  </div>
 
-                <div>
-                  <h4 style={{ color: "rgba(16, 185, 129, 0.9)", fontSize: "18px", fontWeight: "700", margin: "0 0 12px 0" }}>❓ Quiz Questions</h4>
-                  {video.quiz && video.quiz.length > 0 ? (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                      {video.quiz.map((q, i) => (
-                        <div key={i} className="quiz-question">
-                          <div className="quiz-number">Question {i + 1}</div>
-                          <div className="question-text">{q.question}</div>
-                          <div className="quiz-options">
-                            {q.options && q.options.map((option, j) => (
-                              <label key={j} className="quiz-option">
-                                <input type="radio" name={`question-${i}`} />
-                                <span>{option}</span>
-                                {option === q.answer && (
-                                  <span className="correct-badge">✓ Correct</span>
-                                )}
-                              </label>
-                            ))}
+                  {/* Transcript */}
+                  <div className="results-block">
+                    <h4 className="results-section-title">📄 Transcript</h4>
+                    <div className="results-content transcript-content">
+                      {video.transcript || "No transcript available"}
+                    </div>
+                  </div>
+
+                  {/* Key Concepts */}
+                  <div className="results-block">
+                    <h4 className="results-section-title">🎯 Key Concepts</h4>
+                    {video.keyConcepts && video.keyConcepts.length > 0 ? (
+                      <div className="concepts-list">
+                        {video.keyConcepts.map((concept, i) => (
+                          <div key={i} className="concept-item">
+                            <div className="concept-number">{i + 1}</div>
+                            <p className="concept-text">{concept}</p>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p style={{ color: "rgba(255, 255, 255, 0.6)" }}>No quiz questions found</p>
-                  )}
-                </div>
-              </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="no-content">No concepts found</p>
+                    )}
+                  </div>
 
-              <button onClick={handleSaveToLibrary} className="save-btn">Save to My Library ✨</button>
-            </div>
-          ) : (
-            <div className="empty-state">
-              <div className="empty-icon">📄</div>
-              <p>Upload a video to see results</p>
-              <p style={{ fontSize: "14px", opacity: 0.7 }}>Your transcript, summary, and quiz will appear here</p>
-            </div>
-          )}
+                  {/* Quiz Questions */}
+                  <div className="results-block">
+                    <h4 className="results-section-title">❓ Quiz Questions</h4>
+                    {video.quiz && video.quiz.length > 0 ? (
+                      <div className="quiz-list">
+                        {video.quiz.map((q, i) => (
+                          <div key={i} className="quiz-question">
+                            <div className="quiz-number">Q{i + 1}: {q.question}</div>
+                            <div className="quiz-options">
+                              {q.options && q.options.map((option, j) => (
+                                <label key={j} className="quiz-option">
+                                  <input type="radio" name={`question-${i}`} />
+                                  <span>{option}</span>
+                                  {option === q.answer && (
+                                    <span className="correct-badge">✓</span>
+                                  )}
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="no-content">No quiz questions found</p>
+                    )}
+                  </div>
+                </div>
+
+                <button onClick={handleSaveToLibrary} className="save-btn">
+                  ✨ Save to My Library
+                </button>
+              </>
+            ) : (
+              <div className="empty-state">
+                <div className="empty-icon">📄</div>
+                <p>Upload a video to see results</p>
+                <p style={{ fontSize: "14px", opacity: 0.7 }}>
+                  Results will appear here line by line
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </>
